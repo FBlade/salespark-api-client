@@ -1,0 +1,45 @@
+{
+  "name": "@salespark/api-client",
+  "version": "1.0.3",
+  "description": "Robust TypeScript HTTP client for front-end applications, built on Axios. Provides normalized responses, retries, timeouts, cancellation, upload/download helpers, hooks, and CRUD helpers for REST APIs. Ideal for consistent and secure API integration in modern web projects.",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    "import": "./dist/index.js",
+    "require": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rimraf dist",
+    "prepublishOnly": "yarn run clean && yarn run build"
+  },
+  "keywords": [
+    "express",
+    "middleware",
+    "http",
+    "routes",
+    "api",
+    "response",
+    "logger",
+    "salespark"
+  ],
+  "author": "SalesPark",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FBlade/salespark-api-client.git"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "axios": ">=1.11.0"
+  },
+  "devDependencies": {
+    "@types/axios": "^0.14.4",
+    "@types/node": "^24.3.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.2"
+  }
+}

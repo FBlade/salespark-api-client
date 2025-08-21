@@ -4,7 +4,7 @@
 // Guarantees consistent { status:boolean, data:any } responses (never throws).
 // Adds: retries with backoff, cancellation, per-request timeout, upload/download helpers,
 // optional hooks, and CRUD sugar via resource().
-// 
+//
 // IMPROVED VERSION - Fixed types, better error handling, validation, and consistency
 
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
@@ -108,7 +108,7 @@ const apiRequest = (clientOptions: ClientOptions = {}): AxiosInstance => {
             data: config.data,
             responseType: config.responseType,
           };
-          
+
           const modifiedConfig = onRequest(basicConfig);
           if (modifiedConfig) {
             // Apply changes back to internal config
@@ -116,7 +116,7 @@ const apiRequest = (clientOptions: ClientOptions = {}): AxiosInstance => {
           }
         }
       } catch (error) {
-        console.warn('Error in request interceptor:', error);
+        console.warn("Error in request interceptor:", error);
       }
       return config;
     },
@@ -128,7 +128,7 @@ const apiRequest = (clientOptions: ClientOptions = {}): AxiosInstance => {
       try {
         if (typeof onResponse === "function") onResponse(response);
       } catch (error) {
-        console.warn('Error in response interceptor:', error);
+        console.warn("Error in response interceptor:", error);
       }
       return response;
     },
@@ -140,7 +140,7 @@ const apiRequest = (clientOptions: ClientOptions = {}): AxiosInstance => {
         }
         if (typeof onError === "function") onError(error);
       } catch (interceptorError) {
-        console.warn('Error in error interceptor:', interceptorError);
+        console.warn("Error in error interceptor:", interceptorError);
       }
       return Promise.reject(error);
     }
@@ -191,15 +191,9 @@ const normalizeError = (err: AxiosError): ApiErrorResponse => {
 
   // Otherwise, build compact error payload
   const responseData = r?.data as Record<string, unknown> | undefined;
-  const message =
-    responseData?.message as string ||
-    responseData?.error as string ||
-    err?.message ||
-    "Request failed";
+  const message = (responseData?.message as string) || (responseData?.error as string) || err?.message || "Request failed";
 
-  const data: ErrorData = responseData && typeof responseData === "object" 
-    ? { ...responseData, message } 
-    : { message };
+  const data: ErrorData = responseData && typeof responseData === "object" ? { ...responseData, message } : { message };
 
   if (r?.status) data.statusCode = r.status;
   if (err?.code) data.code = err.code; // e.g. ECONNABORTED
@@ -264,10 +258,7 @@ const isRetriable = (err: AxiosError): boolean => {
  * 16-08-2025: Created
  * 21-08-2025: Improved error handling and types
 /************************************************************************************/
-const run = async <T = unknown>(
-  fn: () => Promise<AxiosResponse<T>>, 
-  options: { retry?: Partial<RetryOptions> } = {}
-): Promise<ApiResponse<T>> => {
+const run = async <T = unknown>(fn: () => Promise<AxiosResponse<T>>, options: { retry?: Partial<RetryOptions> } = {}): Promise<ApiResponse<T>> => {
   let attempt = 0;
   const retry = { ...DEFAULT_RETRY, ...(options.retry ?? {}) };
   const maxAttempts = 1 + Math.max(0, retry.retries);
@@ -297,8 +288,8 @@ const run = async <T = unknown>(
 
 // Input validation helpers
 const validateUrl = (url: string): void => {
-  if (!url || typeof url !== 'string' || url.trim() === '') {
-    throw new Error('URL must be a non-empty string');
+  if (!url || typeof url !== "string" || url.trim() === "") {
+    throw new Error("URL must be a non-empty string");
   }
 };
 
@@ -393,23 +384,19 @@ export const withAuth = (
     },
 
     /** Upload: handles File/Blob/FormData. Returns normalized {status,data} */
-    upload: <T = unknown>(
-      url: string,
-      data: FormData | Blob | File | Record<string, unknown>,
-      options: UploadRequestOptions = {}
-    ): Promise<ApiResponse<T>> => {
+    upload: <T = unknown>(url: string, data: FormData | Blob | File | Record<string, unknown>, options: UploadRequestOptions = {}): Promise<ApiResponse<T>> => {
       validateUrl(url);
-      
+
       const { fieldName = "file", onUploadProgress, headers, signal, timeout, retry } = options;
-      
+
       let formData: FormData;
-      
+
       if (data instanceof FormData) {
         formData = data;
       } else if (data instanceof Blob || data instanceof File) {
         formData = new FormData();
         formData.append(fieldName, data);
-      } else if (data && typeof data === 'object') {
+      } else if (data && typeof data === "object") {
         formData = new FormData();
         Object.entries(data).forEach(([key, value]) => {
           if (value !== null && value !== undefined) {
@@ -417,19 +404,24 @@ export const withAuth = (
           }
         });
       } else {
-        throw new Error('Invalid upload data type. Expected FormData, Blob, File, or object.');
+        throw new Error("Invalid upload data type. Expected FormData, Blob, File, or object.");
       }
 
       return run<T>(
-        () => api.post<T>(url, formData, cfg({
-          headers: {
-            ...(headers || {}),
-            'Content-Type': 'multipart/form-data',
-          },
-          signal,
-          timeout,
-          onUploadProgress,
-        })),
+        () =>
+          api.post<T>(
+            url,
+            formData,
+            cfg({
+              headers: {
+                ...(headers || {}),
+                "Content-Type": "multipart/form-data",
+              },
+              signal,
+              timeout,
+              onUploadProgress,
+            })
+          ),
         { retry }
       );
     },
@@ -437,50 +429,53 @@ export const withAuth = (
     /** Download as Blob. Returns {status:true,data:{blob,filename?}} */
     download: async (url: string, options: BaseRequestOptions = {}): Promise<ApiResponse<{ blob: Blob; filename?: string }>> => {
       validateUrl(url);
-      
+
       const { params, headers, signal, timeout, retry } = options;
-      
+
       // Make the request and get the raw response to access headers
       let response: AxiosResponse<Blob>;
       const result = await run<Blob>(
         async () => {
-          response = await api.get<Blob>(url, cfg({ 
-            params, 
-            headers, 
-            signal, 
-            timeout, 
-            responseType: "blob" 
-          }));
+          response = await api.get<Blob>(
+            url,
+            cfg({
+              params,
+              headers,
+              signal,
+              timeout,
+              responseType: "blob",
+            })
+          );
           return response;
-        }, 
+        },
         { retry }
       );
-      
+
       if (!result.status) {
         return result;
       }
-      
+
       // Extract filename from Content-Disposition header if available
       let filename: string | undefined;
-      
+
       try {
-        const contentDisposition = response!.headers['content-disposition'];
+        const contentDisposition = response!.headers["content-disposition"];
         if (contentDisposition) {
           const matches = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
           if (matches && matches[1]) {
-            filename = matches[1].replace(/['"]/g, '');
+            filename = matches[1].replace(/['"]/g, "");
           }
         }
       } catch (error) {
-        console.warn('Could not extract filename from headers:', error);
+        console.warn("Could not extract filename from headers:", error);
       }
-      
+
       return {
         status: true,
         data: {
           blob: result.data,
-          filename
-        }
+          filename,
+        },
       };
     },
 
@@ -514,56 +509,53 @@ export const resource = (
   action: <T = unknown>(subpath: string, payload?: unknown, opts?: BaseRequestOptions) => Promise<ApiResponse<T>>;
 } => {
   validateUrl(baseUrl);
-  
+
   const http = withAuth(clientOptions);
-  
+
   const validateId = (id: string | number): void => {
-    if (id === null || id === undefined || id === '') {
-      throw new Error('Resource ID must be provided and non-empty');
+    if (id === null || id === undefined || id === "") {
+      throw new Error("Resource ID must be provided and non-empty");
     }
   };
-  
+
   const validateSubpath = (subpath: string): void => {
-    if (!subpath || typeof subpath !== 'string' || subpath.trim() === '') {
-      throw new Error('Subpath must be a non-empty string');
+    if (!subpath || typeof subpath !== "string" || subpath.trim() === "") {
+      throw new Error("Subpath must be a non-empty string");
     }
   };
 
   return {
-    list: <T = unknown>(query: Record<string, unknown> = {}, opts: BaseRequestOptions = {}) => 
+    list: <T = unknown>(query: Record<string, unknown> = {}, opts: BaseRequestOptions = {}) =>
       http.getMany<T>(baseUrl, { ...opts, params: { ...opts.params, ...query } }),
-    
+
     get: <T = unknown>(id: string | number, opts: BaseRequestOptions = {}) => {
       validateId(id);
       return http.getOne<T>(`${baseUrl}/${id}`, opts);
     },
-    
-    create: <T = unknown>(payload: unknown, opts: BaseRequestOptions = {}) => 
-      http.post<T>(baseUrl, payload, opts),
-    
+
+    create: <T = unknown>(payload: unknown, opts: BaseRequestOptions = {}) => http.post<T>(baseUrl, payload, opts),
+
     update: <T = unknown>(id: string | number, payload: unknown, opts: BaseRequestOptions = {}) => {
       validateId(id);
       return http.put<T>(`${baseUrl}/${id}`, payload, opts);
     },
-    
+
     patch: <T = unknown>(id: string | number, payload: unknown, opts: BaseRequestOptions = {}) => {
       validateId(id);
       return http.patch<T>(`${baseUrl}/${id}`, payload, opts);
     },
-    
+
     remove: <T = unknown>(id: string | number, opts: BaseRequestOptions = {}) => {
       validateId(id);
       return http.remove<T>(`${baseUrl}/${id}`, opts);
     },
-    
+
     action: <T = unknown>(subpath: string, payload?: unknown, opts: BaseRequestOptions = {}) => {
       validateSubpath(subpath);
-      const method = payload !== undefined ? 'post' : 'get';
+      const method = payload !== undefined ? "post" : "get";
       const url = `${baseUrl}/${subpath}`;
-      
-      return method === 'post' 
-        ? http.post<T>(url, payload, opts)
-        : http.getOne<T>(url, opts);
+
+      return method === "post" ? http.post<T>(url, payload, opts) : http.getOne<T>(url, opts);
     },
   };
 };

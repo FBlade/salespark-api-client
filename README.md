@@ -434,6 +434,22 @@ const api = withAuth({
 
 ---
 
+## 🛠️ Support
+
+Got stuck? Don’t panic — we’ve got you covered.
+
+### 🤖 AI Assistant
+
+We built a custom **AI Assistant** trained _only_ on `@salespark/api-client`.  
+It answers implementation and troubleshooting questions in real time:
+
+👉 Ask the API Client GPT:  
+https://chatgpt.com/g/g-68a9bafde1c48191b720cd55b6cd4e4a-salespark-api-client-v1
+
+_(Free to use with a ChatGPT account)_
+
+---
+
 ### 🔒 Internal Usage Notice
 
 This package is primarily designed and maintained for internal use within the SalesPark ecosystem.
@@ -455,5 +471,5 @@ MIT © [SalesPark](https://salespark.io)
 
 ---
 
-_Document version: 1_  
-_Last update: 21-08-2025_
+_Document version: 2_  
+_Last update: 23-08-2025_

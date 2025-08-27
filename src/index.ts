@@ -67,17 +67,15 @@ interface ClientOptions {
   onError?: (error: AxiosError) => void;
 }
 
+/************************************************************************************
+ * ##: Creates an Axios instance with interceptors
+ * @param {ClientOptions} clientOptions - Optional Axios client configuration
+ * History:
+ * 21-08-2025: Created
+ * 27-08-2025: Fix baseUrl and timeout values - Exported with testing values
+ ************************************************************************************/
 const apiRequest = (clientOptions: ClientOptions = {}): AxiosInstance => {
-  const {
-    baseURL = process.env.REACT_APP_API_URL,
-    timeout = process.env.REACT_APP_ENVIRONMENT?.toLowerCase() === "development" ? 300000 : 15000,
-    defaultHeaders = {},
-    authHeaders = {},
-    onAuthError,
-    onRequest,
-    onResponse,
-    onError,
-  } = clientOptions;
+  const { baseURL, timeout, defaultHeaders = {}, authHeaders = {}, onAuthError, onRequest, onResponse, onError } = clientOptions;
 
   // Create a new axios instance with user-defined auth headers
   const instance = axios.create({

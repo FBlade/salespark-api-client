@@ -238,8 +238,13 @@ const computeBackoff = (attempt: number, { baseDelayMs, maxDelayMs, jitter }: Re
  * @param {Object} err - Error object
  * History:
  * 16-08-2025: Created
+ * 21-08-2025: Improved logic to avoid retries on cancel/abort
  ************************************************************************************/
 const isRetriable = (err: AxiosError): boolean => {
+  // não retries em cancel/abort
+  // @ts-ignore - axios.isCancel existe em runtime
+  if ((axios as any).isCancel?.(err) || (err as any)?.code === "ERR_CANCELED") return false;
+
   const status = err?.response?.status;
   if (!status) return true; // network/timeout
   return status >= 500 && status < 600; // server errors
@@ -325,16 +330,21 @@ interface RequestOptions extends BaseRequestOptions {
  * History:
  * 16-08-2025: Created
  * 21-08-2025: Improved types, validation, and method implementations
+ * 21-10-2025: Added alias "get" for getOne/getMany and "delete" for remove
  ************************************************************************************/
 export const withAuth = (
   clientOptions: ClientOptions = {}
 ): {
   getMany: <T = unknown>(url: string, opts?: BaseRequestOptions) => Promise<ApiResponse<T[]>>;
   getOne: <T = unknown>(url: string, opts?: BaseRequestOptions) => Promise<ApiResponse<T>>;
+  /** Alias: get (auto-detects array/object) */
+  get: <T = unknown>(url: string, opts?: BaseRequestOptions) => Promise<ApiResponse<T | T[]>>;
   post: <T = unknown>(url: string, payload: unknown, opts?: BaseRequestOptions) => Promise<ApiResponse<T>>;
   put: <T = unknown>(url: string, payload: unknown, opts?: BaseRequestOptions) => Promise<ApiResponse<T>>;
   patch: <T = unknown>(url: string, payload: unknown, opts?: BaseRequestOptions) => Promise<ApiResponse<T>>;
   remove: <T = unknown>(url: string, opts?: BaseRequestOptions) => Promise<ApiResponse<T>>;
+  /** Alias: delete (equal to remove) */
+  delete: <T = unknown>(url: string, opts?: BaseRequestOptions) => Promise<ApiResponse<T>>;
   upload: <T = unknown>(url: string, data: FormData | Blob | File | Record<string, unknown>, opts?: UploadRequestOptions) => Promise<ApiResponse<T>>;
   download: (url: string, opts?: BaseRequestOptions) => Promise<ApiResponse<{ blob: Blob; filename?: string }>>;
   raw: AxiosInstance;
@@ -357,6 +367,13 @@ export const withAuth = (
       return run<T>(() => api.get<T>(url, cfg({ params, headers, signal, timeout, responseType })), { retry });
     },
 
+    /** Alias: get (auto-detects array/object) */
+    get: <T = unknown>(url: string, options: BaseRequestOptions = {}): Promise<ApiResponse<T | T[]>> => {
+      validateUrl(url);
+      const { params, headers, signal, timeout, responseType, retry } = options;
+      return run<T | T[]>(() => api.get<T | T[]>(url, cfg({ params, headers, signal, timeout, responseType })), { retry });
+    },
+
     post: <T = unknown>(url: string, payload: unknown, options: BaseRequestOptions = {}): Promise<ApiResponse<T>> => {
       validateUrl(url);
       const { headers, signal, timeout, responseType, retry } = options;
@@ -376,6 +393,13 @@ export const withAuth = (
     },
 
     remove: <T = unknown>(url: string, options: BaseRequestOptions = {}): Promise<ApiResponse<T>> => {
+      validateUrl(url);
+      const { params, headers, signal, timeout, responseType, retry } = options;
+      return run<T>(() => api.delete<T>(url, cfg({ params, headers, signal, timeout, responseType })), { retry });
+    },
+
+    /** Alias: delete (equal to remove) */
+    delete: <T = unknown>(url: string, options: BaseRequestOptions = {}): Promise<ApiResponse<T>> => {
       validateUrl(url);
       const { params, headers, signal, timeout, responseType, retry } = options;
       return run<T>(() => api.delete<T>(url, cfg({ params, headers, signal, timeout, responseType })), { retry });
@@ -493,6 +517,7 @@ export const withAuth = (
  * History:
  * 16-08-2025: Created
  * 21-08-2025: Improved validation and type safety
+ * 21-10-2025: Added alias "get"
  ************************************************************************************/
 export const resource = (
   baseUrl: string,
@@ -526,6 +551,7 @@ export const resource = (
     list: <T = unknown>(query: Record<string, unknown> = {}, opts: BaseRequestOptions = {}) =>
       http.getMany<T>(baseUrl, { ...opts, params: { ...opts.params, ...query } }),
 
+    // Alias: get (auto-detects array/object)
     get: <T = unknown>(id: string | number, opts: BaseRequestOptions = {}) => {
       validateId(id);
       return http.getOne<T>(`${baseUrl}/${id}`, opts);

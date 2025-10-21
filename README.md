@@ -2,7 +2,17 @@
 
 ## @salespark/api-client
 
-Generic HTTP client wrapper built on top of Axios that guarantees consistent `{ status: boolean, data: any }` responses and never throws exceptions. Includes automatic retries with exponential backoff, request cancellation, upload/download helpers, and CRUD sugar via resource helpers.
+Generic HTTP client wrapper for browser-based applications (React / Next.js).
+
+---
+
+## 🧭 Overview
+
+`@salespark/api-client` is a lightweight HTTP abstraction built on top of **Axios**, designed to standardize API communication across SalesPark frontend applications.
+
+It enforces a consistent `{ status: boolean, data: any }` (SalesParkContract) response model, never throws exceptions, and includes built‑in retry, cancellation, and upload/download helpers.
+
+This package is part of the **SalesPark Frontend Libraries** and is primarily maintained for internal use in React projects.
 
 ---
 
@@ -14,422 +24,313 @@ yarn add @salespark/api-client
 npm install @salespark/api-client
 ```
 
-## 🚀 Key Features
+---
 
-- ✅ **Consistent Response Format** - Always returns `{ status: boolean, data }`
-- ✅ **Never Throws** - All errors are normalized to the same response format
-- ✅ **Automatic Retries** - Exponential backoff with jitter for server errors
-- ✅ **Request Cancellation** - Full support for AbortController/AbortSignal
-- ✅ **Upload/Download Helpers** - File uploads with progress and blob downloads
-- ✅ **CRUD Resource Helper** - Simplified REST operations
-- ✅ **Interceptor Hooks** - Custom request/response/error handling
+## 🚀 Core API — withAuth()
 
-## 🔧 Basic Usage
+The `withAuth()` function creates a fully configured Axios wrapper that handles authorization, retries, and consistent response normalization.
 
-### Simple HTTP Client
+### 🔧 Initialization
 
-```js
+```ts
 import { withAuth } from "@salespark/api-client";
 
 const api = withAuth({
-  baseURL: "https://api.example.com", // Can be set via environment variable REACT_APP_API_URL
-  authHeaders: {
-    Authorization: "Bearer your-token",
-  },
-});
-
-api.getOne("/users/123").then((result) => {
-  if (result.status) {
-    console.log("User:", result.data);
-  } else {
-    console.error("Error:", result.data.message);
-  }
+  baseURL: process.env.REACT_APP_API_URL,
+  authHeaders: { Authorization: `Bearer ${getToken()}` },
 });
 ```
 
-### Resource Helper (CRUD Operations)
+### ⚙️ Configuration Options
 
-```js
-import { resource } from "@salespark/api-client";
+| Option           | Type                        | Description                                   |
+| ---------------- | --------------------------- | --------------------------------------------- |
+| `baseURL`        | `string`                    | Base URL for all requests                     |
+| `authHeaders`    | `Record<string, string>`    | Authorization headers (Bearer, API key, etc.) |
+| `defaultHeaders` | `Record<string, string>`    | Headers added to all requests                 |
+| `timeout`        | `number`                    | Timeout per request (ms)                      |
+| `onAuthError`    | `(error, instance) => void` | Triggered on 401/403 responses                |
+| `onRequest`      | `(config) => config`        | Request interceptor                           |
+| `onResponse`     | `(response) => void`        | Response interceptor                          |
+| `onError`        | `(error) => void`           | Generic error handler                         |
 
-const usersApi = resource("/users", {
-  baseURL: "https://api.example.com", // Can be set via environment variable REACT_APP_API_URL
-  authHeaders: { Authorization: "Bearer token" },
-});
+---
 
-usersApi.list({ active: true }).then((res) => console.log(res.data));
-usersApi.get(123).then((res) => console.log(res.data));
-usersApi.create({ name: "John", email: "john@example.com" });
-usersApi.update(123, { name: "Jane" });
-usersApi.patch(123, { email: "jane@example.com" });
-usersApi.remove(123);
+## 🧩 Available Methods
+
+All methods return a **Promise** that resolves to:
+
+```ts
+{
+  status: boolean;
+  data: any;
+}
 ```
 
-## 🔨 API Reference
+### 🔹 GET Operations
 
-### Client Configuration
+| Method                    | Description                                 | Example                                          |
+| ------------------------- | ------------------------------------------- | ------------------------------------------------ |
+| `getOne(path, options?)`  | Fetch a single resource                     | `api.getOne("/users/1")`                         |
+| `getMany(path, options?)` | Fetch an array of resources                 | `api.getMany("/users", { params: { page: 1 } })` |
+| `get(path, options?)`     | Auto-detects if response is single or array | `api.get("/users/1")`                            |
 
-- `baseURL` (string): Base URL for all requests
-- `timeout` (number): Request timeout in milliseconds
-- `defaultHeaders` (object): Default headers for all requests
-- `authHeaders` (object): Authentication headers
-- `onAuthError` (function): 401/403 handler
-- `onRequest` (function): Request interceptor
-- `onResponse` (function): Response interceptor
-- `onError` (function): Error interceptor
+### 🔹 Write Operations
 
-### HTTP Methods
+| Method                        | Description      | Example                                            |
+| ----------------------------- | ---------------- | -------------------------------------------------- |
+| `post(path, data, options?)`  | Create resource  | `api.post("/users", { name: "John" })`             |
+| `put(path, data, options?)`   | Replace resource | `api.put("/users/1", { name: "Jane" })`            |
+| `patch(path, data, options?)` | Partial update   | `api.patch("/users/1", { email: "new@mail.com" })` |
 
-#### GET Operations
+### 🔹 Delete Operations
 
-```js
-api
-  .getMany("/users", {
-    params: { page: 1, limit: 10 },
-    timeout: 5000,
-  })
-  .then((result) => console.log(result.data));
+| Method                   | Description          | Example                  |
+| ------------------------ | -------------------- | ------------------------ |
+| `remove(path, options?)` | Delete resource      | `api.remove("/users/1")` |
+| `delete(path, options?)` | Alias for `remove()` | `api.delete("/users/1")` |
 
-api
-  .getOne("/users/123", {
-    headers: { "Custom-Header": "value" },
-  })
-  .then((result) => console.log(result.data));
+### 🔹 File Operations
+
+| Method                                   | Description                       |
+| ---------------------------------------- | --------------------------------- |
+| `upload(path, fileOrFormData, options?)` | Upload file with progress support |
+| `download(path, options?)`               | Download file as Blob             |
+
+---
+
+## 🧠 Example Usage
+
+```ts
+// Fetch a user
+const user = await api.getOne("/users/42");
+if (user.status) console.log(user.data);
+
+// Create a new user
+await api.post("/users", { name: "Alice" });
+
+// Update user
+await api.patch("/users/42", { name: "Alice Smith" });
+
+// Delete
+await api.remove("/users/42");
 ```
 
-#### POST/PUT/PATCH Operations
+---
 
-```js
-api.post("/users", {
-  name: "John Doe",
-  email: "john@example.com",
-});
+## 🔄 Retry and Timeout
 
-api.put("/users/123", { name: "Jane Doe" });
+Retries are automatically applied for 5xx and network errors.
 
-api.patch("/users/123", { email: "new@email.com" });
-```
-
-#### DELETE Operations
-
-```js
-api.remove("/users/123");
-```
-
-### File Operations
-
-#### File Upload
-
-```js
-const fileInput = document.getElementById("file");
-const file = fileInput.files[0];
-
-api.upload("/upload", file, {
-  fieldName: "document",
-  onUploadProgress: (event) => {
-    const progress = (event.loaded / event.total) * 100;
-    console.log(`Upload progress: ${progress}%`);
-  },
-});
-
-const formData = new FormData();
-formData.append("file", file);
-formData.append("description", "Document description");
-api.upload("/upload", formData);
-
-api.upload("/upload", {
-  file: file,
-  userId: "123",
-  category: "documents",
-});
-```
-
-#### File Download
-
-```js
-api.download("/files/document.pdf").then((result) => {
-  if (result.status) {
-    const url = URL.createObjectURL(result.data.blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = result.data.filename || "download";
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-});
-```
-
-### Request Options
-
-- `params` (object): Query parameters
-- `headers` (object): Custom headers
-- `signal` (AbortSignal): Request cancellation
-- `timeout` (number): Per-request timeout
-- `responseType` (string): Response type
-- `retry` (object): Retry configuration
-- `onUploadProgress` (function): Upload progress callback
-- `fieldName` (string): Form field name for file uploads
-
-### Retry Configuration
-
-```js
-api.getOne("/users/123", {
+```ts
+await api.getOne("/stats", {
   retry: {
     retries: 3,
     baseDelayMs: 500,
     maxDelayMs: 5000,
     jitter: true,
   },
+  timeout: 8000,
 });
 ```
 
-## 📝 Response Format
+---
 
-All methods return a consistent response format:
+## ⏹️ Request Cancellation
 
-```js
-// Success response
-{
-  status: true,
-  data: { /* your data */ }
-}
-
-// Error response
-{
-  status: false,
-  data: {
-    message: 'Error message',
-    statusCode: 404,
-    code: 'ERR_NOT_FOUND',
-    // ...other fields
-  }
-}
-```
-
-### Response Handling
-
-```js
-api.getOne("/users/123").then((result) => {
-  if (result.status) {
-    console.log("User:", result.data);
-  } else {
-    console.error("Error:", result.data.message);
-  }
-});
-```
-
-## 🔄 Advanced Usage
-
-### Request Cancellation
-
-```js
+```ts
 const controller = new AbortController();
 
-const promise = api.getOne("/users/123", {
-  signal: controller.signal,
-});
+const request = api.getMany("/users", { signal: controller.signal });
 
-setTimeout(() => {
-  controller.abort();
-}, 5000);
-
-promise.then((result) => {
-  if (!result.status) {
-    console.error("Request aborted:", result.data.message);
-  }
-});
+setTimeout(() => controller.abort(), 2000);
 ```
 
-### Custom Interceptors
+When aborted, the result resolves to:
 
-```js
-const api = withAuth({
-  baseURL: "https://api.example.com",
-  onRequest: (config) => {
-    config.headers = {
-      ...config.headers,
-      "X-Request-ID": generateRequestId(),
-      "X-Timestamp": Date.now().toString(),
-    };
-    return config;
-  },
-  onResponse: (response) => {
-    console.log("Response from", response.config.url, response.status);
-  },
-  onAuthError: (error, instance) => {
-    console.log("Authentication failed, redirecting to login...");
-    window.location.href = "/login";
-  },
-  onError: (error) => {
-    console.error("API Error:", error.message);
+```ts
+{ status: false, data: { message: "Request aborted" } }
+```
+
+---
+
+## 📤 File Upload
+
+```ts
+const file = (document.getElementById("file") as HTMLInputElement).files?.[0];
+if (!file) return;
+
+await api.upload("/upload", file, {
+  fieldName: "document",
+  onUploadProgress: (evt) => {
+    console.log(`Progress: ${(evt.loaded / evt.total) * 100}%`);
   },
 });
 ```
 
-### Environment-Based Configuration
+With FormData:
 
-```js
-const api = withAuth({
-  baseURL: "https://api.example.com", // Can be set via environment variable REACT_APP_API_URL
-  authHeaders: {
-    Authorization: `Bearer ${getToken()}`,
-  },
-});
+```ts
+const fd = new FormData();
+fd.append("file", file);
+fd.append("meta", "invoice");
+
+await api.upload("/files", fd);
 ```
 
-### Resource Helper Advanced Usage
+---
 
-```js
+## 📥 File Download
+
+```ts
+const res = await api.download("/files/report.pdf");
+
+if (res.status) {
+  const blob = res.data.blob;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = res.data.filename || "download";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+```
+
+---
+
+## 🧱 Response Model
+
+All methods return normalized responses.
+
+```ts
+// Success
+{ status: true, data: {...} }
+
+// Error
+{ status: false, data: { message, statusCode?, code? } }
+```
+
+TypeScript definition:
+
+```ts
+type ApiResponse<T> = { status: true; data: T } | { status: false; data: { message: string; statusCode?: number; code?: string } };
+```
+
+---
+
+## ⚡ Resource Helper
+
+`resource()` is a convenience wrapper around `withAuth()` for REST endpoints.
+
+```ts
+import { resource } from "@salespark/api-client";
+
 const usersApi = resource("/users", {
-  baseURL: "https://api.example.com", // Can be set via environment variable REACT_APP_API_URL
+  baseURL: process.env.REACT_APP_API_URL,
   authHeaders: { Authorization: "Bearer token" },
-  onError: (error) => {
-    console.error("Users API Error:", error);
-  },
 });
 
-usersApi.list({ active: true, page: 1, limit: 50 }).then((res) => console.log(res.data));
-usersApi.action("stats").then((res) => console.log(res.data));
-usersApi.action("bulk-update", { ids: [1, 2, 3], status: "active" });
+await usersApi.list();
+await usersApi.get(42);
+await usersApi.create({ name: "John" });
+await usersApi.update(42, { name: "Jane" });
+await usersApi.remove(42);
 ```
+
+Supported methods:
+
+| Method                | Maps to                | Description    |
+| --------------------- | ---------------------- | -------------- |
+| `list(params?)`       | `GET /resource`        | Get many       |
+| `get(id)`             | `GET /resource/:id`    | Get one        |
+| `create(data)`        | `POST /resource`       | Create         |
+| `update(id, data)`    | `PUT /resource/:id`    | Update         |
+| `patch(id, data)`     | `PATCH /resource/:id`  | Partial update |
+| `remove(id)`          | `DELETE /resource/:id` | Delete         |
+| `action(path, data?)` | `POST /resource/:path` | Custom action  |
+
+---
 
 ## 🧪 Error Handling Patterns
 
-### Basic Error Handling
+```ts
+const res = await api.getOne("/users/999");
 
-```js
-api.getOne("/users/123").then((result) => {
-  if (!result.status) {
-    switch (result.data.statusCode) {
-      case 404:
-        console.log("User not found");
-        break;
-      case 403:
-        console.log("Access denied");
-        break;
-      case 500:
-        console.log("Server error, please try again later");
-        break;
-      default:
-        console.log("Request failed:", result.data.message);
-    }
-    return;
+if (!res.status) {
+  switch (res.data.statusCode) {
+    case 404:
+      console.warn("Not found");
+      break;
+    case 500:
+      console.error("Server error");
+      break;
+    default:
+      console.error(res.data.message);
   }
-  console.log("User loaded:", result.data);
-});
-```
-
-### Async/Await with Error Handling
-
-```js
-async function loadUser(id) {
-  const result = await api.getOne(`/users/${id}`);
-  if (result.status) {
-    return result.data;
-  }
-  console.error("Failed to load user:", {
-    message: result.data.message,
-    statusCode: result.data.statusCode,
-    code: result.data.code,
-  });
-  return null;
 }
 ```
 
-### Authentication Headers
+Async/await pattern:
 
-```js
+```ts
+async function loadUser(id: string) {
+  const res = await api.getOne(`/users/${id}`);
+  return res.status ? res.data : null;
+}
+```
+
+---
+
+## 🔐 Authentication
+
+```ts
 const api = withAuth({
-  authHeaders: {
-    Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  authHeaders: { Authorization: `Bearer ${getToken()}` },
+  onAuthError: async (err, instance) => {
+    const newToken = await refreshToken();
+    instance.defaults.headers.Authorization = `Bearer ${newToken}`;
+    return instance.request(err.config);
   },
 });
+```
 
+Also supports custom headers:
+
+```ts
 const apiKeyClient = withAuth({
-  authHeaders: {
-    "X-API-Key": "your-api-key-here",
-  },
-});
-
-const customAuthClient = withAuth({
-  authHeaders: {
-    Authorization: "Custom your-custom-token",
-  },
+  authHeaders: { "X-API-Key": "abc123" },
 });
 ```
 
-### Automatic Token Refresh
+---
 
-```js
+## 🧩 Interceptors
+
+```ts
 const api = withAuth({
-  authHeaders: {
-    Authorization: `Bearer ${getCurrentToken()}`,
+  onRequest: (cfg) => {
+    console.log("Request:", cfg.method?.toUpperCase(), cfg.url);
+    return cfg;
   },
-  onAuthError: async (error, instance) => {
-    try {
-      const newToken = await refreshToken();
-      instance.defaults.headers["Authorization"] = `Bearer ${newToken}`;
-      return instance.request(error.config);
-    } catch (refreshError) {
-      window.location.href = "/login";
-    }
+  onResponse: (res) => {
+    console.log("Response:", res.status);
+  },
+  onError: (err) => {
+    console.log("Error:", err.message);
   },
 });
 ```
 
-### Request Optimization
+---
 
-```js
-const fastApi = withAuth({ timeout: 5000 });
-const slowApi = withAuth({ timeout: 30000 });
+## ⚙️ Environment Variables
 
-fastApi.getOne("/critical-data", {
-  retry: {
-    retries: 5,
-    baseDelayMs: 1000,
-    maxDelayMs: 10000,
-  },
-});
-
-slowApi.getOne("/optional-data", {
-  retry: { retries: 0 },
-});
+```bash
+REACT_APP_API_URL=https://api.example.com
 ```
 
-### Cancellation for User Experience
-
-```js
-let currentRequest = null;
-
-async function searchUsers(query) {
-  if (currentRequest) {
-    currentRequest.abort();
-  }
-  currentRequest = new AbortController();
-  const result = await api.getMany("/users/search", {
-    params: { q: query },
-    signal: currentRequest.signal,
-  });
-  currentRequest = null;
-  return result;
-}
-```
-
-### Debug Mode
-
-```js
-const api = withAuth({
-  onRequest: (config) => {
-    console.log("🚀 Request:", config.method?.toUpperCase(), config.url, config.data);
-    return config;
-  },
-  onResponse: (response) => {
-    console.log("✅ Response:", response.status, response.config.url);
-  },
-  onError: (error) => {
-    console.log("❌ Error:", error.message, error.config?.url);
-  },
-});
+```ts
+const api = withAuth({ baseURL: process.env.REACT_APP_API_URL });
 ```
 
 ---
@@ -471,5 +372,5 @@ MIT © [SalesPark](https://salespark.io)
 
 ---
 
-_Document version: 2_  
-_Last update: 23-08-2025_
+_Document version: 3_  
+_Last update: 21-10-2025_

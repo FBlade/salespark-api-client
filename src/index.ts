@@ -502,9 +502,16 @@ export const withAuth = (
     },
 
     /** Expose raw axios instance if needed (for advanced cases) */
+
     raw: api,
   };
 };
+
+/**
+ * Alias for withAuth: apiClient is provided only for naming convention convenience.
+ * Both can be used for public or authenticated APIs; there is no logic difference.
+ */
+export const apiClient = withAuth;
 
 /** --------------------------------------------------------------------
  * Resource Helper: sugar for CRUD-ish endpoints

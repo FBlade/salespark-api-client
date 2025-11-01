@@ -30,6 +30,21 @@ npm install @salespark/api-client
 
 The `withAuth()` function creates a fully configured Axios wrapper that handles authorization, retries, and consistent response normalization.
 
+> **Note:** The export `apiClient` is just an alias for `withAuth`, provided for naming convention convenience. Both can be used for public or authenticated APIs; there is no logic difference.
+
+### 📝 Example: Using apiClient for a public API
+
+```ts
+import { apiClient } from "@salespark/api-client";
+
+const publicApi = apiClient({ baseURL: "https://jsonplaceholder.typicode.com" });
+
+const posts = await publicApi.getMany("/posts");
+if (posts.status) {
+  console.log(posts.data);
+}
+```
+
 ### 🔧 Initialization
 
 ```ts
@@ -372,5 +387,5 @@ MIT © [SalesPark](https://salespark.io)
 
 ---
 
-_Document version: 3_  
-_Last update: 21-10-2025_
+_Document version: 4_  
+_Last update: 01-11-2025_

@@ -1,6 +1,6 @@
 {
   "name": "@salespark/api-client",
-  "version": "1.0.8",
+  "version": "1.0.13",
   "description": "Robust TypeScript HTTP client for front-end applications, built on Axios. Provides normalized responses, retries, timeouts, cancellation, upload/download helpers, hooks, and CRUD helpers for REST APIs. Ideal for consistent and secure API integration in modern web projects.",
   "main": "dist/index.js",
   "module": "dist/index.js",
